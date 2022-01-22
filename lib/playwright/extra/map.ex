@@ -57,8 +57,12 @@ defmodule Playwright.Extra.Map do
   # private
   # ----------------------------------------------------------------------------
 
-  defp camelize(key) do
+  defp camelize(key) when is_atom(key) do
     Atom.to_string(key) |> Recase.to_camel()
+  end
+
+  defp camelize(key) when is_binary(key) do
+    key
   end
 
   defp snakecase(key) do

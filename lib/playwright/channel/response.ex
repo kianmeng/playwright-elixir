@@ -3,6 +3,8 @@ defmodule Playwright.Channel.Response do
   alias Playwright.ChannelOwner
   alias Playwright.Channel.{Catalog, Error, Event, Session}
 
+  require Logger
+
   defstruct [:message, :parsed]
 
   # API
@@ -72,6 +74,13 @@ defmodule Playwright.Channel.Response do
   # e.g., [rootAXNode: %{children: [%{name: "Hello World", role: "text"}], name: "", role: "WebArea"}],
   defp parse([{_key, %{} = result}], _catalog) do
     result
+  end
+
+  defp parse([browser: %{guid: browser_guid}, defaultContext: %{guid: context_guid}], catalog) do
+    %{
+      browser: Catalog.get(catalog, browser_guid),
+      default_context: Catalog.get(catalog, context_guid)
+    }
   end
 
   defp parse([{:binary, value}], _catalog) do
