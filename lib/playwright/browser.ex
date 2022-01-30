@@ -88,6 +88,7 @@ defmodule Playwright.Browser do
   @spec contexts(t()) :: [BrowserContext.t()]
   def contexts(%Browser{} = browser) do
     Channel.list(browser.session, {:guid, browser.guid}, "BrowserContext")
+    |> Enum.filter(&(&1.browser.guid == browser.guid))
   end
 
   # ---

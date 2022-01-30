@@ -81,15 +81,19 @@ defmodule Playwright.BrowserType do
 
   @spec connect_over_cdp(Playwright.Browser.t(), url(), options()) :: Playwright.Browser.t()
   def connect_over_cdp(%Playwright.Browser{} = browser, endpoint_url, options \\ %{}) do
-    params = %{"endpointURL" => endpoint_url, "sdkLanguage" => "elixir"}
+    params =
+      %{
+        "endpointURL" => endpoint_url,
+        "sdkLanguage" => "elixir"
+      }
+      |> Map.merge(options)
 
     connect_over_cdp = fn browser_type, params ->
       Channel.post(browser_type.session, {:guid, browser_type.guid}, "connectOverCDP", Map.merge(params, options))
     end
 
     with browser_type <- get_browser_type(browser, :chromium),
-         %{browser: browser} = response <-
-           connect_over_cdp.(browser_type, Map.merge(params, options)) do
+         %{browser: browser} = response <- connect_over_cdp.(browser_type, params) do
       if response.default_context do
         Channel.patch(
           browser_type.session,
@@ -106,17 +110,17 @@ defmodule Playwright.BrowserType do
   end
 
   defp get_browser_type(%Playwright.Browser{} = browser, client) do
-    find_playwright = fn -> Playwright.Channel.find(browser.session, {:guid, "Playwright"}) end
-    find_client_guid = fn playwright, client -> get_in(playwright, [Access.key(client), Access.key(:guid)]) end
+    find_playwright = fn -> {:playwright, Playwright.Channel.find(browser.session, {:guid, "Playwright"})} end
+    find_client_guid = fn playwright, client -> {:client_guid, get_in(playwright, [Access.key(client), Access.key(:guid)])} end
 
-    with {:playwright, playwright} <- {:playwright, find_playwright.()},
-         {:client_guid, client_guid} <- {:client_guid, find_client_guid.(playwright, client)} do
+    with {:playwright, playwright} <- find_playwright.(),
+         {:client_guid, client_guid} <- find_client_guid.(playwright, client) do
       Playwright.Channel.find(browser.session, {:guid, client_guid})
     else
       {:client_guid, nil} ->
         {:error, "Browser type could not be found for client: #{inspect(:client)}"}
 
-      nil ->
+      _ ->
         {:error, :unexpected_error}
     end
   end
